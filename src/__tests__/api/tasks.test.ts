@@ -3,7 +3,19 @@
  * Tests the task CRUD operations
  */
 
-import { Status, Priority } from "@/generated/prisma/enums";
+// Define enums locally to avoid dependency on generated Prisma files
+// These mirror the Prisma schema enums
+enum Status {
+  TODO = "TODO",
+  IN_PROGRESS = "IN_PROGRESS",
+  DONE = "DONE",
+}
+
+enum Priority {
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+}
 
 // Mock Prisma client
 const mockPrisma = {
