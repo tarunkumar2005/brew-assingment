@@ -134,8 +134,8 @@ export function TaskModal({
                 </Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, status: value as any })
+                  onValueChange={(value: "TODO" | "IN_PROGRESS" | "DONE") =>
+                    setFormData({ ...formData, status: value })
                   }
                   disabled={isLoading}
                 >
@@ -156,8 +156,8 @@ export function TaskModal({
                 </Label>
                 <Select
                   value={formData.priority}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, priority: value as any })
+                  onValueChange={(value: "LOW" | "MEDIUM" | "HIGH") =>
+                    setFormData({ ...formData, priority: value })
                   }
                   disabled={isLoading}
                 >

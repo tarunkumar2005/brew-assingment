@@ -38,7 +38,7 @@ export function DeleteConfirmModal({
           <AlertDialogDescription className="space-y-2">
             <p>Are you sure you want to delete this task?</p>
             {taskTitle && (
-              <p className="font-medium text-foreground">"{taskTitle}"</p>
+              <p className="font-medium text-foreground">&ldquo;{taskTitle}&rdquo;</p>
             )}
             <p className="text-sm">
               This action cannot be undone. The task will be permanently removed
