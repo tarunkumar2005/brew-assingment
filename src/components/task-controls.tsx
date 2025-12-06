@@ -10,9 +10,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Search, Filter, ArrowUpDown, Plus } from "lucide-react";
 
-/**
- * Props for the TaskControls component.
- */
 interface TaskControlsProps {
   search: string;
   onSearchChange: (value: string) => void;
@@ -21,12 +18,6 @@ interface TaskControlsProps {
   onNewTask: () => void;
 }
 
-/**
- * TaskControls Component
- * 
- * Provides search, filter, sort, and new task controls.
- * Fully accessible with ARIA labels and keyboard navigation.
- */
 export function TaskControls({
   search,
   onSearchChange,
@@ -35,15 +26,14 @@ export function TaskControls({
   onNewTask,
 }: TaskControlsProps) {
   return (
-    <nav 
+    <nav
       className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
       aria-label="Task controls"
     >
       <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-        {/* Search input with icon */}
         <div className="relative flex-1 max-w-md">
-          <Search 
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" 
+          <Search
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden="true"
           />
           <Input
@@ -55,11 +45,18 @@ export function TaskControls({
             aria-label="Search tasks by title or description"
           />
         </div>
-        <div className="flex gap-2" role="group" aria-label="Filter and sort options">
-          {/* Filter dropdown */}
+        <div
+          className="flex gap-2"
+          role="group"
+          aria-label="Filter and sort options"
+        >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-10" aria-label="Filter tasks by status">
+              <Button
+                variant="outline"
+                className="h-10"
+                aria-label="Filter tasks by status"
+              >
                 <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
                 Filter
               </Button>
@@ -80,10 +77,13 @@ export function TaskControls({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Sort dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-10" aria-label="Sort tasks">
+              <Button
+                variant="outline"
+                className="h-10"
+                aria-label="Sort tasks"
+              >
                 <ArrowUpDown className="mr-2 h-4 w-4" aria-hidden="true" />
                 Sort
               </Button>
@@ -106,9 +106,8 @@ export function TaskControls({
         </div>
       </div>
 
-      {/* New task button */}
-      <Button 
-        onClick={onNewTask} 
+      <Button
+        onClick={onNewTask}
         className="h-10 font-medium"
         aria-label="Create a new task"
       >
