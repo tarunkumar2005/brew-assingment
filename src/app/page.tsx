@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Header } from "@/components/header";
 import { TaskControls } from "@/components/task-controls";
 import { TaskItem } from "@/components/task-item";
@@ -13,9 +13,14 @@ import {
   ErrorState,
 } from "@/components/task-states";
 import { getSession, signOut } from "@/lib/auth-actions";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Loader2 } from "lucide-react";
 import axios from "axios";
 
+/**
+ * Task interface representing a task item in the application.
+ * Matches the Prisma Task model structure.
+ */
 interface Task {
   id: string;
   title: string;
@@ -26,6 +31,9 @@ interface Task {
   createdAt: Date | string;
 }
 
+/**
+ * User interface for authenticated user data.
+ */
 interface User {
   id: string;
   name?: string | null;
@@ -33,31 +41,74 @@ interface User {
   image?: string | null;
 }
 
+/**
+ * HomePage Component
+ * 
+ * Main task management page that displays:
+ * - User header with logout functionality
+ * - Task search, filter, and sort controls
+ * - List of user's tasks with CRUD operations
+ * 
+ * Features:
+ * - Authentication check on mount
+ * - Debounced search for performance optimization
+ * - Client-side filtering and sorting for instant feedback
+ * - Modal-based task creation/editing
+ */
 export default function HomePage() {
+  // ============================================
+  // State Management
+  // ============================================
+  
+  // Authentication state
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  
+  // Task data state
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Filter, search, and sort state
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [sortBy, setSortBy] = useState("date-desc");
+  
+  // Modal state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Debounce search query to prevent excessive filtering on every keystroke
+  // This improves performance by waiting 300ms after user stops typing
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // ============================================
+  // Effects
+  // ============================================
+
+  // Check authentication status on component mount
   useEffect(() => {
     checkAuth();
   }, []);
 
+  // Fetch tasks when user is authenticated
   useEffect(() => {
     if (user) {
       fetchTasks();
     }
   }, [user]);
 
+  // ============================================
+  // Authentication Handlers
+  // ============================================
+
+  /**
+   * Checks if user is authenticated by fetching the current session.
+   * Sets user state if session exists, otherwise leaves as null.
+   */
   const checkAuth = async () => {
     try {
       const session = await getSession();
@@ -71,6 +122,14 @@ export default function HomePage() {
     }
   };
 
+  // ============================================
+  // Task CRUD Operations
+  // ============================================
+
+  /**
+   * Fetches all tasks for the authenticated user from the API.
+   * Updates loading and error states accordingly.
+   */
   const fetchTasks = async () => {
     setIsLoading(true);
     setError(null);
@@ -84,6 +143,9 @@ export default function HomePage() {
     }
   };
 
+  /**
+   * Handles user logout by clearing session and resetting state.
+   */
   const handleLogout = async () => {
     try {
       await signOut();
@@ -94,32 +156,50 @@ export default function HomePage() {
     }
   };
 
+  /**
+   * Opens the task modal for creating a new task.
+   */
   const handleNewTask = () => {
     setEditingTask(null);
     setIsTaskModalOpen(true);
   };
 
+  /**
+   * Opens the task modal for editing an existing task.
+   * @param task - The task to edit
+   */
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setIsTaskModalOpen(true);
   };
 
+  /**
+   * Opens the delete confirmation modal for a task.
+   * @param taskId - The ID of the task to delete
+   */
   const handleDeleteClick = (taskId: string) => {
     setDeletingTaskId(taskId);
     setIsDeleteModalOpen(true);
   };
 
+  /**
+   * Saves a task (create or update) via API.
+   * Refreshes task list on success.
+   * @param taskData - Partial task data to save
+   */
   const handleSaveTask = async (taskData: Partial<Task>) => {
     setModalLoading(true);
     try {
       if (editingTask) {
+        // Update existing task
         await axios.put(`/api/tasks/${editingTask.id}`, taskData);
       } else {
+        // Create new task
         await axios.post('/api/tasks', taskData);
       }
 
       setIsTaskModalOpen(false);
-      fetchTasks();
+      fetchTasks(); // Refresh task list
     } catch (err) {
       console.error("Save task failed:", err);
     } finally {
@@ -127,6 +207,10 @@ export default function HomePage() {
     }
   };
 
+  /**
+   * Confirms and executes task deletion via API.
+   * Refreshes task list on success.
+   */
   const handleConfirmDelete = async () => {
     if (!deletingTaskId) return;
 
@@ -135,7 +219,7 @@ export default function HomePage() {
       await axios.delete(`/api/tasks/${deletingTaskId}`);
       setIsDeleteModalOpen(false);
       setDeletingTaskId(null);
-      fetchTasks();
+      fetchTasks(); // Refresh task list
     } catch (err) {
       console.error("Delete task failed:", err);
     } finally {
@@ -143,54 +227,81 @@ export default function HomePage() {
     }
   };
 
-  const filteredAndSortedTasks = tasks
-    .filter((task) => {
-      if (filterStatus !== "ALL" && task.status !== filterStatus) {
-        return false;
-      }
+  // ============================================
+  // Memoized Computed Values
+  // ============================================
 
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          task.title.toLowerCase().includes(query) ||
-          task.description?.toLowerCase().includes(query)
-        );
-      }
+  /**
+   * Filters and sorts tasks based on current filter/search/sort state.
+   * Uses debounced search query for performance optimization.
+   * Memoized to prevent unnecessary recalculations.
+   */
+  const filteredAndSortedTasks = useMemo(() => {
+    return tasks
+      .filter((task) => {
+        // Apply status filter
+        if (filterStatus !== "ALL" && task.status !== filterStatus) {
+          return false;
+        }
 
-      return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "date-desc":
+        // Apply search filter (using debounced value)
+        if (debouncedSearchQuery) {
+          const query = debouncedSearchQuery.toLowerCase();
           return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            task.title.toLowerCase().includes(query) ||
+            task.description?.toLowerCase().includes(query)
           );
-        case "date-asc":
-          return (
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-        case "priority-desc":
-          const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
-        case "priority-asc":
-          const priorityOrderAsc = { HIGH: 3, MEDIUM: 2, LOW: 1 };
-          return priorityOrderAsc[a.priority] - priorityOrderAsc[b.priority];
-        default:
-          return 0;
-      }
-    });
+        }
 
+        return true;
+      })
+      .sort((a, b) => {
+        // Apply sorting based on selected sort option
+        switch (sortBy) {
+          case "date-desc":
+            return (
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+          case "date-asc":
+            return (
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+          case "priority-desc": {
+            const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+            return priorityOrder[b.priority] - priorityOrder[a.priority];
+          }
+          case "priority-asc": {
+            const priorityOrderAsc = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+            return priorityOrderAsc[a.priority] - priorityOrderAsc[b.priority];
+          }
+          default:
+            return 0;
+        }
+      });
+  }, [tasks, filterStatus, debouncedSearchQuery, sortBy]);
+
+  // Get the task being deleted for confirmation modal
   const deletingTask = tasks.find((t) => t.id === deletingTaskId);
 
+  // ============================================
+  // Render
+  // ============================================
+
+  // Show auth prompt if not authenticated
   if (!isCheckingAuth && !user) {
     return <AuthPromptModal open={true} />;
   }
 
+  // Show loading spinner while checking auth
   if (isCheckingAuth) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div 
+        className="flex h-screen items-center justify-center"
+        role="status"
+        aria-label="Loading application"
+      >
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -201,7 +312,11 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <Header user={user} onLogout={handleLogout} />
 
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      <main 
+        className="container mx-auto px-4 py-8 max-w-6xl"
+        role="main"
+        aria-label="Task management"
+      >
         <div className="space-y-6">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">My Tasks</h2>
@@ -218,7 +333,12 @@ export default function HomePage() {
             onNewTask={handleNewTask}
           />
 
-          <div className="min-h-[400px]">
+          <section 
+            className="min-h-[400px]"
+            aria-label="Task list"
+            aria-live="polite"
+            aria-busy={isLoading}
+          >
             {isLoading ? (
               <TaskListSkeleton />
             ) : error ? (
@@ -228,22 +348,23 @@ export default function HomePage() {
                 message={
                   searchQuery || filterStatus !== "ALL"
                     ? "No tasks match your current filters. Try adjusting your search or filters."
-                    : "You don't have any tasks yet. Click 'New Task' to create your first task."
+                    : "You don&apos;t have any tasks yet. Click &apos;New Task&apos; to create your first task."
                 }
               />
             ) : (
-              <div className="space-y-3">
+              <ul className="space-y-3" role="list" aria-label="Tasks">
                 {filteredAndSortedTasks.map((task) => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onEdit={handleEditTask}
-                    onDelete={handleDeleteClick}
-                  />
+                  <li key={task.id}>
+                    <TaskItem
+                      task={task}
+                      onEdit={handleEditTask}
+                      onDelete={handleDeleteClick}
+                    />
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
-          </div>
+          </section>
         </div>
       </main>
 
