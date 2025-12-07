@@ -48,7 +48,7 @@ export function TaskModal({
 }: TaskModalProps) {
   const isEdit = !!task;
 
-  const getInitialFormData = () => ({
+  const [formData, setFormData] = useState({
     title: task?.title || "",
     description: task?.description || "",
     status: (task?.status || "TODO") as "TODO" | "IN_PROGRESS" | "DONE",
@@ -57,14 +57,6 @@ export function TaskModal({
       ? new Date(task.dueDate).toISOString().split("T")[0]
       : "",
   });
-
-  const [formData, setFormData] = useState(getInitialFormData);
-
-  useEffect(() => {
-    if (open) {
-      setFormData(getInitialFormData());
-    }
-  }, [open, task?.id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +82,7 @@ export function TaskModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleClose} key={task?.id || "new"}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Task" : "Create New Task"}</DialogTitle>
