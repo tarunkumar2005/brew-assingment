@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -48,14 +48,34 @@ export function TaskModal({
 }: TaskModalProps) {
   const isEdit = !!task;
   const [formData, setFormData] = useState({
-    title: task?.title || "",
-    description: task?.description || "",
-    status: task?.status || "TODO",
-    priority: task?.priority || "LOW",
-    dueDate: task?.dueDate
-      ? new Date(task.dueDate).toISOString().split("T")[0]
-      : "",
+    title: "",
+    description: "",
+    status: "TODO" as "TODO" | "IN_PROGRESS" | "DONE",
+    priority: "LOW" as "LOW" | "MEDIUM" | "HIGH",
+    dueDate: "",
   });
+
+  useEffect(() => {
+    if (task) {
+      setFormData({
+        title: task.title || "",
+        description: task.description || "",
+        status: task.status || "TODO",
+        priority: task.priority || "LOW",
+        dueDate: task.dueDate
+          ? new Date(task.dueDate).toISOString().split("T")[0]
+          : "",
+      });
+    } else {
+      setFormData({
+        title: "",
+        description: "",
+        status: "TODO",
+        priority: "LOW",
+        dueDate: "",
+      });
+    }
+  }, [task]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,15 +88,6 @@ export function TaskModal({
   const handleClose = () => {
     if (!isLoading) {
       onClose();
-      setTimeout(() => {
-        setFormData({
-          title: "",
-          description: "",
-          status: "TODO",
-          priority: "LOW",
-          dueDate: "",
-        });
-      }, 200);
     }
   };
 
