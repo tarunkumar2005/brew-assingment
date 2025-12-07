@@ -6,7 +6,7 @@ A simple task management app where users can create, edit, delete and manage the
 
 ## Tech Stack
 
-- Next.js 15 (App Router)
+- Next.js 16 (App Router)
 - TypeScript
 - Prisma ORM
 - PostgreSQL (Supabase)
