@@ -58,8 +58,40 @@ export function TaskModal({
       : "",
   });
 
+  const [dueDateError, setDueDateError] = useState<string | null>(null);
+
+  const getTodayDate = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today.toISOString().split("T")[0];
+  };
+
+  const validateDueDate = (date: string) => {
+    if (!date) {
+      setDueDateError(null);
+      return true;
+    }
+
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      setDueDateError("Due date cannot be in the past");
+      return false;
+    }
+
+    setDueDateError(null);
+    return true;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.dueDate && !validateDueDate(formData.dueDate)) {
+      return;
+    }
+
     onSave({
       ...formData,
       dueDate: formData.dueDate || null,
@@ -182,12 +214,18 @@ export function TaskModal({
                 id="dueDate"
                 type="date"
                 value={formData.dueDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, dueDate: e.target.value })
-                }
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  setFormData({ ...formData, dueDate: newDate });
+                  validateDueDate(newDate);
+                }}
+                min={getTodayDate()}
                 disabled={isLoading}
-                className="h-10"
+                className={`h-10 ${dueDateError ? "border-destructive" : ""}`}
               />
+              {dueDateError && (
+                <p className="text-sm text-destructive">{dueDateError}</p>
+              )}
             </div>
           </div>
 
@@ -200,7 +238,7 @@ export function TaskModal({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || !!dueDateError}>
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
